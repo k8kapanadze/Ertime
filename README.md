@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+
 <html lang="ka">
 <head>
     <meta charset="UTF-8">
@@ -13,48 +13,45 @@
             --total-red: #8b0000;
         }
 
-        body { font-family: 'Segoe UI', sans-serif; margin: 20px; background: #f4f7f6; }
-        .container { max-width: 1300px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 20px; background: #f4f7f6; }
+        .container { max-width: 1400px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.1); }
         
-        /* Header Controls */
-        .top-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 15px; flex-wrap: wrap; }
         .main-controls { display: flex; gap: 10px; align-items: center; }
         
-        .btn { padding: 10px 18px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; transition: 0.3s; }
+        .btn { padding: 10px 18px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; transition: 0.3s; font-size: 13px; }
         .btn-autofill { background: var(--primary-blue); }
         .btn-pdf { background: #dc3545; }
         .btn-add { background: #28a745; }
 
-        /* Table */
-        .table-container { overflow-x: auto; margin-top: 10px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { border: 1px solid #ccc; text-align: center; padding: 6px; min-width: 35px; }
-        th { background: #f8f9fa; position: sticky; top: 0; }
+        .table-container { overflow-x: auto; margin-top: 10px; border-radius: 4px; border: 1px solid #ddd; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; }
+        th, td { border: 1px solid #ccc; text-align: center; padding: 4px; min-width: 35px; }
+        th { background: #f8f9fa; position: sticky; top: 0; z-index: 10; }
         
-        .nurse-cell { 
-            font-weight: bold; width: 180px; text-align: left; cursor: pointer; 
-            user-select: none; position: relative;
-        }
-        .real-row { background-color: var(--real-row-bg); }
-        .total-real { color: var(--total-red); font-weight: bold; }
+        .nurse-cell-wrapper { display: flex; justify-content: space-between; align-items: center; padding: 0 5px; width: 180px; }
+        .nurse-name { font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .menu-dots { cursor: pointer; padding: 0 8px; font-size: 18px; font-weight: bold; color: #666; transition: 0.2s; }
+        .menu-dots:hover { color: #000; background: #eee; border-radius: 4px; }
 
-        /* Context Menu for Long Press */
-        #contextMenu {
+        .real-row { background-color: var(--real-row-bg) !important; font-weight: bold; }
+        .total-real { color: var(--total-red); }
+
+        .dropdown-menu {
             display: none; position: absolute; background: white; border: 1px solid #ccc;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 1000; padding: 5px 0; border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; border-radius: 4px; min-width: 120px;
         }
-        #contextMenu button {
-            display: block; width: 100%; padding: 8px 15px; border: none; background: none;
-            text-align: left; cursor: pointer; font-size: 14px;
+        .dropdown-menu button {
+            display: block; width: 100%; padding: 10px 15px; border: none; background: none;
+            text-align: left; cursor: pointer; font-size: 13px;
         }
-        #contextMenu button:hover { background: #eee; }
+        .dropdown-menu button:hover { background: #f5f5f5; }
 
-        /* Forms Area */
         .footer-forms { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; }
         .form-box { background: #fdfdfd; padding: 15px; border-radius: 6px; border: 1px solid #ddd; }
         input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 5px; }
 
-        .search-output { margin-top: 10px; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196f3; display: none; }
+        .search-output { margin-top: 10px; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196f3; display: none; min-height: 40px; }
     </style>
 </head>
 <body>
@@ -63,7 +60,7 @@
     <div class="top-bar">
         <div class="main-controls">
             <button class="btn btn-autofill" onclick="autoFillAll()">ავტომატური შევსება (მე-4 დღე)</button>
-            <input type="text" id="newNurseName" placeholder="ექთნის სახელი">
+            <input type="text" id="newNurseName" placeholder="სახელი და გვარი">
             <button class="btn btn-add" onclick="addNurse()">დამატება</button>
         </div>
         <div>
@@ -102,7 +99,7 @@
     </div>
 </div>
 
-<div id="contextMenu">
+<div id="actionMenu" class="dropdown-menu">
     <button onclick="editNurseName()">რედაქტირება</button>
     <button onclick="deleteNurse()" style="color: red;">წაშლა</button>
 </div>
@@ -111,7 +108,6 @@
     let nurses = JSON.parse(localStorage.getItem('nurses')) || [];
     let scheduleData = JSON.parse(localStorage.getItem('scheduleData')) || {};
     let activeNurse = null;
-    let longPressTimer;
 
     const months = ["იანვარი", "თებერვალი", "მარტი", "აპრილი", "მაისი", "ივნისი", "ივლისი", "აგვისტო", "სექტემბერი", "ოქტომბერი", "ნოემბერი", "დეკემბერი"];
 
@@ -137,21 +133,26 @@
             let pTotal = 0, rTotal = 0;
 
             // Planned Row
-            html += `<tr><td class="nurse-cell" onmousedown="startPress(event, '${nurse}')" onmouseup="endPress()" onmouseleave="endPress()">${nurse}</td>`;
+            html += `<tr><td class="nurse-cell">
+                <div class="nurse-cell-wrapper">
+                    <span class="nurse-name">${nurse}</span>
+                    <span class="menu-dots" onclick="showMenu(event, '${nurse}')">⋮</span>
+                </div>
+            </td>`;
             for (let i = 1; i <= days; i++) {
                 const val = (scheduleData[keyBase + '-p'] && scheduleData[keyBase + '-p'][i]) || 0;
                 pTotal += parseInt(val);
-                html += `<td><select onchange="updateCell('${nurse}', ${i}, this.value, 'p')">
+                html += `<td><select class="p-select" data-nurse="${nurse}" data-day="${i}" onchange="updateCell('${nurse}', ${i}, this.value, 'p')">
                     <option value="0" ${val==0?'selected':''}>-</option>
                     <option value="8" ${val==8?'selected':''}>8</option>
                     <option value="16" ${val==16?'selected':''}>16</option>
                     <option value="24" ${val==24?'selected':''}>24</option>
                 </select></td>`;
             }
-            html += `<td>${pTotal}</td></tr>`;
+            html += `<td class="total-planned"><strong>${pTotal}</strong></td></tr>`;
 
             // Real Row
-            html += `<tr class="real-row"><td><small>რეალური</small></td>`;
+            html += `<tr class="real-row"><td style="text-align:right; padding-right:10px;"><small>რეალური</small></td>`;
             for (let i = 1; i <= days; i++) {
                 const val = (scheduleData[keyBase + '-r'] && scheduleData[keyBase + '-r'][i]) || 0;
                 rTotal += parseInt(val);
@@ -165,20 +166,16 @@
         updateDayDropdowns(days);
     }
 
-    // Long Press Logic
-    function startPress(e, nurse) {
+    function showMenu(e, nurse) {
+        e.stopPropagation();
         activeNurse = nurse;
-        longPressTimer = setTimeout(() => {
-            const menu = document.getElementById('contextMenu');
-            menu.style.display = 'block';
-            menu.style.left = e.pageX + 'px';
-            menu.style.top = e.pageY + 'px';
-        }, 600);
+        const menu = document.getElementById('actionMenu');
+        menu.style.display = 'block';
+        menu.style.left = (e.pageX - 100) + 'px';
+        menu.style.top = e.pageY + 'px';
     }
 
-    function endPress() { clearTimeout(longPressTimer); }
-
-    document.addEventListener('click', () => document.getElementById('contextMenu').style.display = 'none');
+    window.onclick = () => document.getElementById('actionMenu').style.display = 'none';
 
     function deleteNurse() {
         if(confirm(`წავშალოთ ${activeNurse}?`)) {
@@ -217,7 +214,7 @@
         nurses.forEach(nurse => {
             const key = `${year}-${month}-${nurse}-p`;
             if(!scheduleData[key]) return;
-            let firstDay = Object.keys(scheduleData[key]).find(d => scheduleData[key][d] > 0);
+            let firstDay = Object.keys(scheduleData[key]).sort((a,b)=>a-b).find(d => scheduleData[key][d] > 0);
             if(firstDay) {
                 let hrs = scheduleData[key][firstDay];
                 for(let i = parseInt(firstDay); i <= days; i += 4) scheduleData[key][i] = hrs;
@@ -252,8 +249,8 @@
 
         if(sNurse && !sDay) {
             const key = `${year}-${month}-${sNurse}-p`;
-            const days = scheduleData[key] ? Object.keys(scheduleData[key]).filter(d => scheduleData[key][d] > 0) : [];
-            output.innerHTML = days.length ? `<strong>${sNurse}</strong> მორიგეობს: ${days.join(', ')} რიცხვში.` : "მორიგეობები ვერ მოიძებნა.";
+            const days = scheduleData[key] ? Object.keys(scheduleData[key]).filter(d => scheduleData[key][d] > 0).sort((a,b)=>a-b) : [];
+            output.innerHTML = days.length ? `<strong>${sNurse}</strong>-ს მორიგეობები: ${days.join(', ')}` : "მონაცემები ვერ მოიძებნა.";
         } else if(sDay) {
             let found = [];
             nurses.forEach(n => {
@@ -295,15 +292,27 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('l', 'mm', 'a4');
         const monthText = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
-        doc.text(`განრიგი: ${monthText} ${document.getElementById('yearSelect').value}`, 14, 10);
+        const yearVal = document.getElementById('yearSelect').value;
+
+        doc.text(`ექთნების მორიგეობის განრიგი: ${monthText} ${yearVal}`, 14, 12);
+
         doc.autoTable({ 
             html: 'table', 
-            startY: 15, 
+            startY: 20, 
             theme: 'grid', 
-            styles: { fontSize: 7 },
-            headStyles: { fillColor: [0, 31, 63] }
+            styles: { fontSize: 7, halign: 'center' },
+            headStyles: { fillColor: [0, 31, 63] },
+            didParseCell: function(data) {
+                // ეს ნაწილი უზრუნველყოფს SELECT-ების მნიშვნელობების PDF-ში გადატანას
+                if (data.cell.raw && data.cell.raw.getElementsByTagName) {
+                    const select = data.cell.raw.getElementsByTagName('select')[0];
+                    if (select) {
+                        data.cell.text = select.value === "0" ? "-" : select.value;
+                    }
+                }
+            }
         });
-        doc.save('ganrigi.pdf');
+        doc.save(`ganrigi_${monthText}_${yearVal}.pdf`);
     }
 </script>
 </body>
