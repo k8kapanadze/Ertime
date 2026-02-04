@@ -2,207 +2,321 @@
 <html lang="ka">
 <head>
     <meta charset="UTF-8">
-    <title>ექთნების მართვის პანელი</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ექთნების მორიგეობის ცხრილი</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
-        :root { --dark-blue: #1e3a8a; --dark-red: #991b1b; --bg-gray: #f3f4f6; }
-        body { font-family: sans-serif; background-color: var(--bg-gray); padding: 20px; font-size: 14px; }
-        .container { max-width: 1300px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        
-        .header-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 20px; }
-        .nurse-management, .main-controls { background: #fff; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #ccc; text-align: center; padding: 5px; }
-        th { background: #f1f5f9; }
-        
-        .real-row { background-color: #f1f1f1; font-weight: bold; }
-        .real-total { color: var(--dark-red); }
-        
-        button { cursor: pointer; border: none; border-radius: 4px; padding: 8px 12px; color: white; }
-        .btn-add { background: #2563eb; }
-        .btn-delete { background: #dc2626; padding: 2px 6px; font-size: 10px; }
-        .btn-fill { background: var(--dark-blue); font-weight: bold; width: 100%; margin-top: 10px; }
-        .btn-pdf { background: #059669; }
+        :root {
+            --primary-blue: #003366;
+            --dark-bg: #e9ecef;
+            --real-row-bg: #d1d8e0;
+            --total-red: #8b0000;
+        }
 
-        select { padding: 4px; border-radius: 4px; border: 1px solid #ccc; }
-        .entry-form { margin-top: 20px; padding: 15px; background: #f9fafb; border: 1px solid #ddd; border-radius: 8px; }
-        .input-group { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f4f7f6; }
+        .container { max-width: 1200px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        
+        /* Header & Controls */
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .btn { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; color: white; transition: 0.3s; }
+        .btn-blue { background: var(--primary-blue); }
+        .btn-green { background: #28a745; }
+        .btn-pdf { background: #dc3545; }
+        .btn:hover { opacity: 0.8; }
+
+        input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+        /* Table Styling */
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th, td { border: 1px solid #ccc; text-align: center; padding: 5px; min-width: 30px; }
+        th { background: #f8f9fa; }
+        
+        .nurse-cell { font-weight: bold; background: #fff; width: 150px; text-align: left; }
+        .real-row { background-color: var(--real-row-bg); }
+        .total-cell { font-weight: bold; }
+        .total-real { color: var(--total-red); }
+
+        /* Form Styling */
+        .forms-section { margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { background: #fafafa; padding: 15px; border-radius: 5px; border: 1px solid #eee; }
+        
+        .search-results { margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 4px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header-section">
-        <div class="nurse-management">
-            <h3>ექთნების სია</h3>
-            <div style="display:flex; gap:5px; margin-bottom:10px;">
-                <input type="text" id="newNurseName" placeholder="სახელი გვარი">
-                <button class="btn-add" onclick="addNurse()">დამატება</button>
-            </div>
-            <ul id="nurseUl" style="list-style:none; padding:0; max-height: 150px; overflow-y: auto;"></ul>
-        </div>
+    <h2>ექთნების მორიგეობის ცხრილი</h2>
 
-        <div class="main-controls">
-            <label>თვე:</label>
-            <input type="month" id="monthPicker" value="2024-05" onchange="generateTable()">
-            <button class="btn-pdf" onclick="exportToPDF()">PDF ექსპორტი</button>
-            <button class="btn-fill" onclick="autoFillAll()">ყველას შევსება მე-4 დღეზე (მუქი ლურჯი)</button>
+    <div class="controls">
+        <div>
+            <input type="text" id="nurseName" placeholder="ექთნის სახელი">
+            <button class="btn btn-blue" onclick="addNurse()">დამატება</button>
+        </div>
+        <div>
+            <select id="monthSelect" onchange="renderTable()">
+                <option value="0">იანვარი</option>
+                <option value="1">თებერვალი</option>
+                <option value="2">მარტი</option>
+                <option value="3">აპრილი</option>
+                <option value="4">მაისი</option>
+                <option value="5">ივნისი</option>
+                <option value="6">ივლისი</option>
+                <option value="7">აგვისტო</option>
+                <option value="8">სექტემბერი</option>
+                <option value="9">ოქტომბერი</option>
+                <option value="10">ნოემბერი</option>
+                <option value="11">დეკემბერი</option>
+            </select>
+            <input type="number" id="yearSelect" value="2024" style="width: 70px;" onchange="renderTable()">
+        </div>
+        <div>
+            <button class="btn btn-blue" style="background: #001f3f;" onclick="autoFillAll()">ყველას შევსება მე-4 დღეზე</button>
+            <button class="btn btn-pdf" onclick="exportPDF()">PDF ექსპორტი</button>
         </div>
     </div>
 
-    <div id="tableWrapper" style="overflow-x: auto;"></div>
+    <div class="table-container" id="mainTableContainer">
+        </div>
 
-    <div class="entry-form">
-        <h3>რეალური საათის დაფიქსირება</h3>
-        <div class="input-group">
-            <input type="text" id="realNurseName" placeholder="ჩაწერეთ სახელი">
-            <select id="realDaySelect"></select>
-            <select id="realHourSelect">
+    <div class="forms-section">
+        <div class="form-group">
+            <h4>რეალური საათის დაფიქსირება</h4>
+            <input type="text" id="realNurseName" placeholder="ექთნის სახელი" list="nurseList">
+            <datalist id="nurseList"></datalist>
+            <select id="realDay"></select>
+            <select id="realHours">
                 <option value="0">0 სთ</option>
                 <option value="8">8 სთ</option>
                 <option value="16">16 სთ</option>
                 <option value="24">24 სთ</option>
             </select>
-            <button class="btn-add" onclick="saveRealHours()">შენახვა</button>
+            <button class="btn btn-green" onclick="saveRealHours()">შენახვა</button>
+        </div>
+
+        <div class="form-group">
+            <h4>ძებნა</h4>
+            <input type="text" id="searchNurse" placeholder="ექთნის სახელი">
+            <input type="number" id="searchDay" placeholder="რიცხვი" min="1" max="31">
+            <button class="btn btn-blue" onclick="searchData()">ძებნა</button>
+            <div id="searchResults" class="search-results"></div>
         </div>
     </div>
 </div>
 
 <script>
-    let nurses = JSON.parse(localStorage.getItem('nurses')) || ["ნინო კ.", "მარიამ ბ."];
+    let nurses = JSON.parse(localStorage.getItem('nurses')) || [];
     let scheduleData = JSON.parse(localStorage.getItem('scheduleData')) || {};
 
-    function saveToStorage() {
+    // Initialize
+    window.onload = () => {
+        const now = new Date();
+        document.getElementById('monthSelect').value = now.getMonth();
+        document.getElementById('yearSelect').value = now.getFullYear();
+        updateDayDropdown();
+        renderTable();
+        updateNurseDatalist();
+    };
+
+    function addNurse() {
+        const name = document.getElementById('nurseName').value.trim();
+        if (name && !nurses.includes(name)) {
+            nurses.push(name);
+            saveData();
+            renderTable();
+            updateNurseDatalist();
+            document.getElementById('nurseName').value = '';
+        }
+    }
+
+    function removeNurse(name) {
+        if(confirm(`დარწმუნებული ხართ, რომ გსურთ ${name}-ს წაშლა?`)) {
+            nurses = nurses.filter(n => n !== name);
+            saveData();
+            renderTable();
+            updateNurseDatalist();
+        }
+    }
+
+    function getDaysInMonth(month, year) {
+        return new Date(year, parseInt(month) + 1, 0).getDate();
+    }
+
+    function renderTable() {
+        const month = document.getElementById('monthSelect').value;
+        const year = document.getElementById('yearSelect').value;
+        const days = getDaysInMonth(month, year);
+        updateDayDropdown();
+
+        let html = `<table><thead><tr><th>ექთანი / დღე</th>`;
+        for (let i = 1; i <= days; i++) html += `<th>${i}</th>`;
+        html += `<th>ჯამი</th><th>მოქმედება</th></tr></thead><tbody>`;
+
+        nurses.forEach(nurse => {
+            const keyBase = `${year}-${month}-${nurse}`;
+            let plannedTotal = 0;
+            let realTotal = 0;
+
+            // Planned Row
+            html += `<tr><td class="nurse-cell">${nurse}<br><small>(დაგეგმილი)</small></td>`;
+            for (let i = 1; i <= days; i++) {
+                const val = (scheduleData[keyBase + '-p'] && scheduleData[keyBase + '-p'][i]) || 0;
+                plannedTotal += parseInt(val);
+                html += `<td>
+                    <select onchange="updateCell('${nurse}', ${i}, this.value, 'p')">
+                        <option value="0" ${val==0?'selected':''}>-</option>
+                        <option value="8" ${val==8?'selected':''}>8</option>
+                        <option value="16" ${val==16?'selected':''}>16</option>
+                        <option value="24" ${val==24?'selected':''}>24</option>
+                    </select>
+                </td>`;
+            }
+            html += `<td class="total-cell">${plannedTotal}</td>
+                     <td rowspan="2"><button onclick="removeNurse('${nurse}')" style="color:red">წაშლა</button></td></tr>`;
+
+            // Real Row
+            html += `<tr class="real-row"><td class="nurse-cell"><small>(რეალური)</small></td>`;
+            for (let i = 1; i <= days; i++) {
+                const val = (scheduleData[keyBase + '-r'] && scheduleData[keyBase + '-r'][i]) || 0;
+                realTotal += parseInt(val);
+                html += `<td>${val || ''}</td>`;
+            }
+            html += `<td class="total-cell total-real">${realTotal}</td></tr>`;
+        });
+
+        html += `</tbody></table>`;
+        document.getElementById('mainTableContainer').innerHTML = html;
+    }
+
+    function updateCell(nurse, day, val, type) {
+        const month = document.getElementById('monthSelect').value;
+        const year = document.getElementById('yearSelect').value;
+        const key = `${year}-${month}-${nurse}-${type}`;
+        
+        if (!scheduleData[key]) scheduleData[key] = {};
+        scheduleData[key][day] = parseInt(val);
+        saveData();
+        renderTable();
+    }
+
+    function autoFillAll() {
+        const month = document.getElementById('monthSelect').value;
+        const year = document.getElementById('yearSelect').value;
+        const days = getDaysInMonth(month, year);
+
+        nurses.forEach(nurse => {
+            const key = `${year}-${month}-${nurse}-p`;
+            if (!scheduleData[key]) return;
+            
+            // პოულობს პირველ ჩაწერილ მორიგეობას
+            let firstDay = 0;
+            for (let i = 1; i <= days; i++) {
+                if (scheduleData[key][i] > 0) {
+                    firstDay = i;
+                    break;
+                }
+            }
+
+            if (firstDay > 0) {
+                const hours = scheduleData[key][firstDay];
+                for (let i = firstDay; i <= days; i += 4) {
+                    scheduleData[key][i] = hours;
+                }
+            }
+        });
+        saveData();
+        renderTable();
+    }
+
+    function saveRealHours() {
+        const nurse = document.getElementById('realNurseName').value;
+        const day = document.getElementById('realDay').value;
+        const hours = document.getElementById('realHours').value;
+        const month = document.getElementById('monthSelect').value;
+        const year = document.getElementById('yearSelect').value;
+
+        if (!nurses.includes(nurse)) { alert("ექთანი ვერ მოიძებნა"); return; }
+
+        const key = `${year}-${month}-${nurse}-r`;
+        if (!scheduleData[key]) scheduleData[key] = {};
+        scheduleData[key][day] = parseInt(hours);
+        
+        saveData();
+        renderTable();
+    }
+
+    function searchData() {
+        const nurse = document.getElementById('searchNurse').value.trim();
+        const day = document.getElementById('searchDay').value;
+        const month = document.getElementById('monthSelect').value;
+        const year = document.getElementById('yearSelect').value;
+        const resultsDiv = document.getElementById('searchResults');
+        resultsDiv.style.display = 'block';
+        
+        let msg = "";
+
+        if (nurse && !day) {
+            const key = `${year}-${month}-${nurse}-p`;
+            let days = [];
+            if (scheduleData[key]) {
+                for (let d in scheduleData[key]) if(scheduleData[key][d] > 0) days.push(d);
+            }
+            msg = days.length ? `${nurse}-ს მორიგეობები: ${days.join(', ')} რიცხვში.` : "მორიგეობები ვერ მოიძებნა.";
+        } else if (day && !nurse) {
+            let found = [];
+            nurses.forEach(n => {
+                const key = `${year}-${month}-${n}-p`;
+                if (scheduleData[key] && scheduleData[key][day] > 0) found.push(n);
+            });
+            msg = found.length ? `${day} რიცხვში მორიგეობენ: ${found.join(', ')}` : "ამ დღეს არავინ მორიგეობს.";
+        } else {
+            msg = "გთხოვთ შეავსოთ სახელი ან რიცხვი.";
+        }
+        resultsDiv.innerText = msg;
+    }
+
+    function saveData() {
         localStorage.setItem('nurses', JSON.stringify(nurses));
         localStorage.setItem('scheduleData', JSON.stringify(scheduleData));
     }
 
-    function addNurse() {
-        const name = document.getElementById('newNurseName').value.trim();
-        if (name && !nurses.includes(name)) {
-            nurses.push(name);
-            document.getElementById('newNurseName').value = '';
-            saveToStorage();
-            renderNurseList();
-            generateTable();
-        }
+    function updateDayDropdown() {
+        const month = document.getElementById('monthSelect').value;
+        const year = document.getElementById('yearSelect').value;
+        const days = getDaysInMonth(month, year);
+        let options = "";
+        for (let i = 1; i <= days; i++) options += `<option value="${i}">${i}</option>`;
+        document.getElementById('realDay').innerHTML = options;
     }
 
-    function deleteNurse(name) {
-        nurses = nurses.filter(n => n !== name);
-        saveToStorage();
-        renderNurseList();
-        generateTable();
+    function updateNurseDatalist() {
+        let options = "";
+        nurses.forEach(n => options += `<option value="${n}">`);
+        document.getElementById('nurseList').innerHTML = options;
     }
 
-    function renderNurseList() {
-        const ul = document.getElementById('nurseUl');
-        ul.innerHTML = nurses.map(n => `
-            <li style="display:flex; justify-content:space-between; margin-bottom:5px; border-bottom:1px solid #eee; padding-bottom:3px;">
-                ${n} <button class="btn-delete" onclick="deleteNurse('${n}')">X</button>
-            </li>
-        `).join('');
-    }
-
-    function generateTable() {
-        const month = document.getElementById('monthPicker').value;
-        const daysCount = new Date(month.split('-')[0], month.split('-')[1], 0).getDate();
-        const wrapper = document.getElementById('tableWrapper');
-
-        // რეალური საათების რიცხვის სელექტის განახლება
-        const daySelect = document.getElementById('realDaySelect');
-        daySelect.innerHTML = Array.from({length: daysCount}, (_, i) => `<option value="${i+1}">${i+1}</option>`).join('');
-
-        if (!scheduleData[month]) scheduleData[month] = {};
-        
-        let html = `<table><thead><tr><th>ექთანი</th><th>ტიპი</th>`;
-        for (let i = 1; i <= daysCount; i++) html += `<th>${i}</th>`;
-        html += `<th>ჯამი</th></tr></thead><tbody>`;
-
-        nurses.forEach(nurse => {
-            if (!scheduleData[month][nurse]) {
-                scheduleData[month][nurse] = { planned: Array(daysCount).fill(''), real: Array(daysCount).fill('') };
-            }
-            const pData = scheduleData[month][nurse].planned;
-            const rData = scheduleData[month][nurse].real;
-            const pSum = pData.reduce((a, b) => a + (Number(b) || 0), 0);
-            const rSum = rData.reduce((a, b) => a + (Number(b) || 0), 0);
-
-            // დაგეგმილი
-            html += `<tr><td rowspan="2"><b>${nurse}</b></td><td>დაგეგმ.</td>`;
-            pData.forEach((val, i) => {
-                html += `<td>
-                    <select onchange="updateHour('${nurse}', ${i}, 'planned', this.value)">
-                        <option value=""></option>
-                        <option value="8" ${val == 8 ? 'selected' : ''}>8</option>
-                        <option value="16" ${val == 16 ? 'selected' : ''}>16</option>
-                        <option value="24" ${val == 24 ? 'selected' : ''}>24</option>
-                    </select>
-                </td>`;
-            });
-            html += `<td>${pSum}</td></tr>`;
-
-            // რეალური
-            html += `<tr class="real-row"><td>რეალ.</td>`;
-            rData.forEach(val => html += `<td>${val || ''}</td>`);
-            html += `<td class="real-total">${rSum}</td></tr>`;
-        });
-
-        html += `</tbody></table>`;
-        wrapper.innerHTML = html;
-    }
-
-    function updateHour(nurse, day, type, val) {
-        const month = document.getElementById('monthPicker').value;
-        scheduleData[month][nurse][type][day] = val;
-        saveToStorage();
-        generateTable();
-    }
-
-    function autoFillAll() {
-        const month = document.getElementById('monthPicker').value;
-        nurses.forEach(nurse => {
-            const planned = scheduleData[month][nurse].planned;
-            let firstIdx = planned.findIndex(v => v !== '');
-            if (firstIdx !== -1) {
-                let val = planned[firstIdx];
-                for (let i = firstIdx; i < planned.length; i += 4) {
-                    planned[i] = val;
-                }
-            }
-        });
-        saveToStorage();
-        generateTable();
-    }
-
-    function saveRealHours() {
-        const name = document.getElementById('realNurseName').value;
-        const day = document.getElementById('realDaySelect').value - 1;
-        const hour = document.getElementById('realHourSelect').value;
-        const month = document.getElementById('monthPicker').value;
-
-        if (nurses.includes(name)) {
-            scheduleData[month][name].real[day] = hour;
-            saveToStorage();
-            generateTable();
-        } else {
-            alert("ასეთი ექთანი ვერ მოიძებნა!");
-        }
-    }
-
-    async function exportToPDF() {
+    async function exportPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('l', 'mm', 'a4');
-        const month = document.getElementById('monthPicker').value;
-        doc.text(`Schedule: ${month}`, 14, 10);
-        doc.autoTable({ html: 'table', startY: 15, theme: 'grid', styles: {fontSize: 7} });
-        doc.save(`Schedule_${month}.pdf`);
-    }
+        const month = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
+        const year = document.getElementById('yearSelect').value;
 
-    renderNurseList();
-    generateTable();
+        doc.text(`მორიგეობის განრიგი: ${month} ${year}`, 14, 15);
+        
+        const table = document.querySelector("table");
+        doc.autoTable({ 
+            html: table,
+            startY: 20,
+            theme: 'grid',
+            styles: { fontSize: 7, cellPadding: 1 },
+            headStyles: { fillColor: [0, 51, 102] }
+        });
+
+        doc.save(`ganrigi_${month}_${year}.pdf`);
+    }
 </script>
+
 </body>
 </html>
