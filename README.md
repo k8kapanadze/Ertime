@@ -2,9 +2,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ექთნების მართვის სისტემა</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+    <title>ექთნების მართვის სისტემა (Live)</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
     <style>
         :root {
             --primary-blue: #001f3f;
@@ -20,7 +22,7 @@
         
         .btn { padding: 10px 18px; border: none; border-radius: 4px; cursor: pointer; color: white; font-weight: bold; transition: 0.3s; }
         .btn-blue { background: var(--primary-blue); }
-        .btn-pdf { background: #dc3545; }
+        .btn-pdf { background: #2c3e50; }
 
         .table-container { overflow-x: auto; margin-top: 10px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -51,6 +53,13 @@
         input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 5px; }
 
         .search-output { margin-top: 10px; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196f3; display: none; }
+
+        /* ბეჭდვის ოპტიმიზაცია - აქრობს ღილაკებს ფურცელზე */
+        @media print {
+            .top-bar, .footer-forms, #contextMenu, .menu-dots { display: none !important; }
+            .container { box-shadow: none; max-width: 100%; }
+            body { background: white; margin: 0; }
+        }
     </style>
 </head>
 <body>
@@ -65,7 +74,7 @@
         <div>
             <select id="monthSelect" onchange="renderTable()"></select>
             <input type="number" id="yearSelect" value="2024" style="width: 80px;" onchange="renderTable()">
-            <button class="btn btn-pdf" onclick="exportPDF()">PDF ექსპორტი</button>
+            <button class="btn btn-pdf" onclick="window.print()">ბეჭდვა / PDF</button>
         </div>
     </div>
 
@@ -89,8 +98,8 @@
         <div class="form-box">
             <h3>ძებნა</h3>
             <div style="display: flex; gap: 5px; flex-direction: column;">
-                <input type="text" id="searchNurse" placeholder="ჩაწერეთ სახელი (მორიგეობის დღეები)">
-                <input type="number" id="searchDay" placeholder="ჩაწერეთ რიცხვი (ვინ მორიგეობს)">
+                <input type="text" id="searchNurse" placeholder="სახელი">
+                <input type="number" id="searchDay" placeholder="რიცხვი">
                 <button class="btn btn-blue" onclick="performSearch()">ძებნა</button>
             </div>
             <div id="searchOutput" class="search-output"></div>
@@ -104,22 +113,39 @@
 </div>
 
 <script>
-    let nurses = JSON.parse(localStorage.getItem('nurses')) || [];
-    let scheduleData = JSON.parse(localStorage.getItem('scheduleData')) || {};
+    // შენი Firebase მონაცემები
+    const firebaseConfig = {
+        apiKey: "AIzaSyB3roORgMRtg6mmAyH3rUQmzmyAfc_ud6U",
+        authDomain: "ertimecmc.firebaseapp.com",
+        databaseURL: "https://ertimecmc-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "ertimecmc",
+        storageBucket: "ertimecmc.firebasestorage.app",
+        messagingSenderId: "164048857022",
+        appId: "1:164048857022:web:359061cf694057bc16bbef"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let nurses = [];
+    let scheduleData = {};
     let activeNurse = null;
 
     const months = ["იანვარი", "თებერვალი", "მარტი", "აპრილი", "მაისი", "ივნისი", "ივლისი", "აგვისტო", "სექტემბერი", "ოქტომბერი", "ნოემბერი", "დეკემბერი"];
 
-    // Base64 encoding of a small part of Sylfaen font to enable Unicode
-    // In a real scenario, you'd load the full font file. 
-    // This is a simplified approach to ensure the logic handles Unicode.
-    
+    // მონაცემების წამოღება ბაზიდან რეალურ დროში
+    db.ref().on('value', (snapshot) => {
+        const data = snapshot.val() || {};
+        nurses = data.nurses || [];
+        scheduleData = data.scheduleData || {};
+        renderTable();
+        updateNurseList();
+    });
+
     window.onload = () => {
         const mSelect = document.getElementById('monthSelect');
         months.forEach((m, i) => mSelect.innerHTML += `<option value="${i}">${m}</option>`);
         mSelect.value = new Date().getMonth();
-        renderTable();
-        updateNurseList();
     };
 
     function renderTable() {
@@ -162,22 +188,26 @@
         updateDayDropdowns(days);
     }
 
-    function showMenu(e, nurse) {
-        e.stopPropagation();
-        activeNurse = nurse;
-        const menu = document.getElementById('contextMenu');
-        menu.style.display = 'block';
-        menu.style.left = e.pageX + 'px';
-        menu.style.top = e.pageY + 'px';
+    function updateCell(nurse, day, val, type) {
+        const month = document.getElementById('monthSelect').value;
+        const year = document.getElementById('yearSelect').value;
+        const key = `${year}-${month}-${nurse}-${type}`;
+        db.ref(`scheduleData/${key}/${day}`).set(parseInt(val));
     }
 
-    document.addEventListener('click', () => document.getElementById('contextMenu').style.display = 'none');
+    function addNurse() {
+        const name = document.getElementById('newNurseName').value.trim();
+        if(name && !nurses.includes(name)) {
+            nurses.push(name);
+            db.ref('nurses').set(nurses);
+            document.getElementById('newNurseName').value = '';
+        }
+    }
 
     function deleteNurse() {
         if(confirm(`წავშალოთ ${activeNurse}?`)) {
-            nurses = nurses.filter(n => n !== activeNurse);
-            save();
-            renderTable();
+            const updated = nurses.filter(n => n !== activeNurse);
+            db.ref('nurses').set(updated);
         }
     }
 
@@ -186,19 +216,7 @@
         if(newName && newName !== activeNurse) {
             const idx = nurses.indexOf(activeNurse);
             nurses[idx] = newName;
-            save();
-            renderTable();
-        }
-    }
-
-    function addNurse() {
-        const name = document.getElementById('newNurseName').value.trim();
-        if(name && !nurses.includes(name)) {
-            nurses.push(name);
-            document.getElementById('newNurseName').value = '';
-            save();
-            renderTable();
-            updateNurseList();
+            db.ref('nurses').set(nurses);
         }
     }
 
@@ -213,11 +231,11 @@
             let firstDay = Object.keys(scheduleData[key]).sort((a,b)=>a-b).find(d => scheduleData[key][d] > 0);
             if(firstDay) {
                 let hrs = scheduleData[key][firstDay];
-                for(let i = parseInt(firstDay); i <= days; i += 4) scheduleData[key][i] = hrs;
+                for(let i = parseInt(firstDay); i <= days; i += 4) {
+                    db.ref(`scheduleData/${key}/${i}`).set(hrs);
+                }
             }
         });
-        save();
-        renderTable();
     }
 
     function saveRealHours() {
@@ -228,11 +246,7 @@
         const year = document.getElementById('yearSelect').value;
 
         if(!nurses.includes(nurse)) return alert("ექთანი არ არსებობს!");
-        const key = `${year}-${month}-${nurse}-r`;
-        if(!scheduleData[key]) scheduleData[key] = {};
-        scheduleData[key][day] = parseInt(hrs);
-        save();
-        renderTable();
+        db.ref(`scheduleData/${year}-${month}-${nurse}-r/${day}`).set(parseInt(hrs));
     }
 
     function performSearch() {
@@ -246,30 +260,24 @@
         if(sNurse) {
             const key = `${year}-${month}-${sNurse}-p`;
             const days = scheduleData[key] ? Object.keys(scheduleData[key]).filter(d => scheduleData[key][d] > 0) : [];
-            output.innerHTML = days.length ? `<strong>${sNurse}</strong> მორიგეობს: ${days.join(', ')} რიცხვში.` : "მორიგეობები ვერ მოიძებნა.";
+            output.innerHTML = days.length ? `<strong>${sNurse}</strong> მორიგეობს: ${days.join(', ')}` : "ვერ მოიძებნა.";
         } else if(sDay) {
             let found = [];
             nurses.forEach(n => {
                 const key = `${year}-${month}-${n}-p`;
                 if(scheduleData[key] && scheduleData[key][sDay] > 0) found.push(n);
             });
-            output.innerHTML = found.length ? `${sDay} რიცხვში მორიგეობენ: <strong>${found.join(', ')}</strong>` : "ამ დღეს მორიგე არავინაა.";
+            output.innerHTML = found.length ? `${sDay} რიცხვში: <strong>${found.join(', ')}</strong>` : "ამ დღეს მორიგე არავინაა.";
         }
     }
 
-    function updateCell(nurse, day, val, type) {
-        const month = document.getElementById('monthSelect').value;
-        const year = document.getElementById('yearSelect').value;
-        const key = `${year}-${month}-${nurse}-${type}`;
-        if(!scheduleData[key]) scheduleData[key] = {};
-        scheduleData[key][day] = parseInt(val);
-        save();
-        renderTable();
-    }
-
-    function save() {
-        localStorage.setItem('nurses', JSON.stringify(nurses));
-        localStorage.setItem('scheduleData', JSON.stringify(scheduleData));
+    function showMenu(e, nurse) {
+        e.stopPropagation();
+        activeNurse = nurse;
+        const menu = document.getElementById('contextMenu');
+        menu.style.display = 'block';
+        menu.style.left = e.pageX + 'px';
+        menu.style.top = e.pageY + 'px';
     }
 
     function updateDayDropdowns(days) {
@@ -284,57 +292,7 @@
         nurses.forEach(n => dl.innerHTML += `<option value="${n}">`);
     }
 
-    // PDF Export with Unicode Font
-    async function exportPDF() {
-        const { jsPDF } = window.jspdf;
-        // მნიშვნელოვანია: ვიყენებთ დამატებით ბიბლიოთეკას, რომელიც HTML-ს სურათად გარდაქმნის ან ვამატებთ ქართულ ფონტს
-        // ამ შემთხვევაში ყველაზე მარტივი გზაა AutoTable-სთვის მივუთითოთ font: "sans-serif" და გამოვიყენოთ დამატებითი "shim"
-        
-        const doc = new jsPDF('l', 'mm', 'a4');
-        const monthText = document.getElementById('monthSelect').options[document.getElementById('monthSelect').selectedIndex].text;
-        const year = document.getElementById('yearSelect').value;
-
-        // იმისათვის, რომ ქართული ტექსტი გამოჩნდეს, ჩვენ ვიყენებთ HTML-to-Canvas მეთოდს
-        // რაც ყველაზე სანდოა ქართული შრიფტისთვის
-        const element = document.getElementById('tableWrapper');
-        
-        // დავაწეროთ სათაური ქართულად
-        doc.text(`${monthText} ${year}`, 14, 10);
-
-        const rows = [];
-        const table = document.querySelector("table");
-        const headers = Array.from(table.querySelectorAll("thead th")).map(th => th.innerText);
-
-        table.querySelectorAll("tbody tr").forEach((tr) => {
-            const rowData = [];
-            tr.querySelectorAll("td").forEach((td, cellIdx) => {
-                if(cellIdx === 0) {
-                    rowData.push(td.innerText.replace('⋮', '').trim());
-                } else {
-                    const select = td.querySelector("select");
-                    rowData.push(select ? (select.value === "0" ? "-" : select.value) : td.innerText);
-                }
-            });
-            rows.push(rowData);
-        });
-
-        // ვიყენებთ სპეციალურ პარამეტრს, რომელიც ბრაუზერის სისტემურ ფონტს იყენებს
-        doc.autoTable({
-            head: [headers],
-            body: rows,
-            startY: 20,
-            theme: 'grid',
-            styles: { font: 'Courier', fontSize: 8, halign: 'center' }, // Courier უფრო კარგად აღიქვამს უნიკოდს ზოგიერთ სისტემაში
-            headStyles: { fillColor: [0, 31, 63] },
-            didParseCell: function(data) {
-                if (data.row.index % 2 !== 0) {
-                    data.cell.styles.fillColor = [209, 216, 224];
-                }
-            }
-        });
-
-        doc.save(`ganrigi_${monthText}.pdf`);
-    }
+    document.addEventListener('click', () => document.getElementById('contextMenu').style.display = 'none');
 </script>
 </body>
 </html>
