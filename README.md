@@ -10,13 +10,19 @@
         body { font-family: 'Segoe UI', sans-serif; margin: 20px; background: #f4f7f6; }
         .container { max-width: 1500px; margin: auto; background: var(--white); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
-        .top-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 25px; gap: 10px; flex-wrap: wrap; }
+        /* ზედა სექციები */
+        .header-section { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 2px solid #eee; }
+        .box { padding: 15px; background: #fafafa; border-radius: 8px; border: 1px solid #ddd; }
+        
+        .controls-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 10px; flex-wrap: wrap; }
+        
         .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; transition: 0.2s; background: var(--blue); }
         .btn-red { background: var(--red); }
         .btn:hover { opacity: 0.8; }
         
-        .table-wrap { overflow-x: auto; border: 1px solid #ddd; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        /* ცხრილი */
+        .table-wrap { overflow-x: auto; border: 1px solid #ddd; border-radius: 8px; margin-top: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; background: white; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
         th { background: #f8f9fa; position: sticky; top: 0; }
         
@@ -27,17 +33,33 @@
         #menu { display: none; position: absolute; background: white; border: 1px solid #ccc; box-shadow: 0 2px 10px rgba(0,0,0,0.2); z-index: 100; border-radius: 4px; }
         #menu button { display: block; width: 100%; padding: 10px; border: none; background: none; text-align: left; cursor: pointer; }
 
-        .forms { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px; }
-        .box { padding: 20px; background: #fafafa; border-radius: 8px; border: 1px solid #eee; }
         input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
 
-        @media print { .top-bar, .forms, #menu, input[type="checkbox"] { display: none !important; } }
+        @media print { .header-section, .controls-bar, #menu, input[type="checkbox"] { display: none !important; } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="top-bar">
+    <div class="header-section">
+        <div class="box">
+            <h3>საათის დაფიქსირება (რეალური)</h3>
+            <input type="text" id="rName" placeholder="ექთნის სახელი" list="nList">
+            <datalist id="nList"></datalist>
+            <select id="rDay"></select>
+            <select id="rHrs"><option value="8">8</option><option value="16">16</option><option value="24">24</option><option value="0">0</option></select>
+            <button class="btn" onclick="saveReal()">შენახვა</button>
+        </div>
+        <div class="box">
+            <h3>ძებნა</h3>
+            <input type="text" id="sName" placeholder="სახელი">
+            <input type="number" id="sDay" placeholder="რიცხვი">
+            <button class="btn" onclick="search()">ძებნა</button>
+            <div id="sOut" style="margin-top:10px; font-weight:bold; color: var(--blue);"></div>
+        </div>
+    </div>
+
+    <div class="controls-bar">
         <div>
             <button class="btn btn-red" onclick="bulkAction('fill')">ავტომატური შევსება (მე-4 დღე)</button>
             <button class="btn btn-red" onclick="bulkAction('clear')">მონიშნულების გასუფთავება</button>
@@ -52,24 +74,6 @@
     </div>
 
     <div class="table-wrap" id="tableBox"></div>
-
-    <div class="forms">
-        <div class="box">
-            <h3>საათის დაფიქსირება (რეალური)</h3>
-            <input type="text" id="rName" placeholder="ექთნის სახელი" list="nList">
-            <datalist id="nList"></datalist>
-            <select id="rDay"></select>
-            <select id="rHrs"><option value="8">8</option><option value="16">16</option><option value="24">24</option><option value="0">0</option></select>
-            <button class="btn" onclick="saveReal()">შენახვა</button>
-        </div>
-        <div class="box">
-            <h3>ძებნა</h3>
-            <input type="text" id="sName" placeholder="სახელი">
-            <input type="number" id="sDay" placeholder="რიცხვი">
-            <button class="btn" onclick="search()">ძებნა</button>
-            <div id="sOut" style="margin-top:10px; font-weight:bold;"></div>
-        </div>
-    </div>
 </div>
 
 <div id="menu">
@@ -132,7 +136,7 @@
                     <option value="24" ${v==24?'selected':''}>24</option>
                 </select></td>`;
             }
-            h += `<td>${pt}</td></tr><tr class="real-row"><td>რეალური</td>`;
+            h += `<td style="font-weight:bold">${pt}</td></tr><tr class="real-row"><td>რეალური</td>`;
             for(let i=1; i<=days; i++){
                 const v = (scheduleData[kb+'-r'] && scheduleData[kb+'-r'][i]) || 0; rt += v;
                 h += `<td>${v||''}</td>`;
@@ -153,6 +157,10 @@
         const selected = Array.from(document.querySelectorAll('.nurse-check:checked')).map(c => c.value);
 
         if(selected.length === 0) return alert("გთხოვთ მონიშნოთ ექთნები");
+
+        if(type === 'clear') {
+            if(!confirm("ნამდვილად გსურთ მონიშნული ექთნების გრაფიკის გასუფთავება?")) return;
+        }
 
         selected.forEach(n => {
             const k = `${y}-${m}-${n}-p`;
