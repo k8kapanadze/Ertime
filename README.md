@@ -1,68 +1,101 @@
-
+<!DOCTYPE html>
 <html lang="ka">
 <head>
     <meta charset="UTF-8">
-    <title>ChronoCare ER - Advanced Scheduler</title>
+    <title>გრაფიკი ER - Final System</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <style>
-        :root { --primary: #2c3e50; --plan-color: #3498db; --fact-color: #c0392b; --bg: #f4f7f6; }
-        body { font-family: sans-serif; margin: 0; background: var(--bg); font-size: 12px; }
-        .header { background: var(--primary); color: white; padding: 15px; text-align: center; }
-        .controls { background: white; padding: 15px; display: flex; flex-wrap: wrap; gap: 10px; sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        :root { --primary: #2c3e50; --plan: #3498db; --fact: #c0392b; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--bg); font-size: 12px; }
         
+        .header { background: var(--primary); color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; }
+        
+        /* კონტროლის პანელი */
+        .main-container { display: flex; flex-direction: column; height: 100vh; }
+        .controls { background: white; padding: 15px; display: flex; flex-wrap: wrap; gap: 20px; border-bottom: 2px solid #ddd; }
+        
+        .btn-column { display: flex; flex-direction: column; gap: 8px; }
+        button { cursor: pointer; padding: 10px 20px; border: none; border-radius: 4px; color: white; font-weight: bold; min-width: 200px; }
+        .btn-save { background: #8e44ad; }
+        .btn-pdf { background: #e67e22; }
+        .btn-auto { background: #2980b9; }
+        .btn-record { background: #27ae60; margin-top: 10px; }
+
+        /* რეალური საათების დაფიქსირების ველი */
+        .record-panel { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .record-panel select, .record-panel input { padding: 8px; margin-right: 5px; border-radius: 4px; border: 1px solid #ccc; }
+
+        /* ცხრილი */
+        .table-area { overflow: auto; flex-grow: 1; padding: 10px; }
         table { border-collapse: collapse; width: 100%; background: white; }
         th, td { border: 1px solid #ddd; padding: 4px; text-align: center; }
-        th { background: #eee; position: sticky; top: 0; }
-        .name-col { position: sticky; left: 0; background: white; min-width: 150px; font-weight: bold; z-index: 5; }
+        th { background: #ecf0f1; position: sticky; top: 0; z-index: 10; }
+        .name-col { position: sticky; left: 0; background: white; z-index: 11; font-weight: bold; min-width: 180px; text-align: left; }
         
-        .row-plan { background: #f0f7ff; color: var(--plan-color); font-size: 11px; }
+        .row-plan { background: #f0f7ff; color: #2980b9; }
         .row-fact { background: #2c3e50; color: white; font-weight: bold; }
-        .row-fact input { background: transparent; color: white; border: none; text-align: center; width: 100%; }
+        .row-fact input { background: transparent; color: white; border: none; text-align: center; width: 100%; font-weight: bold; }
         
-        .total-plan { color: var(--plan-color); font-weight: bold; }
-        .total-fact { color: #e74c3c; font-weight: bold; background: #ffeaea; }
+        .total-plan { color: var(--plan); font-weight: bold; }
+        .total-fact { color: white; background: #c0392b; font-weight: bold; }
         
-        button { cursor: pointer; padding: 8px; border: none; border-radius: 4px; color: white; }
-        .btn-blue { background: var(--plan-color); }
-        .btn-red { background: var(--fact-color); }
-        .btn-green { background: #27ae60; }
+        .search-area { display: flex; gap: 10px; align-items: center; background: #eee; padding: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <h1>🏥 ChronoCare ER System</h1>
-</div>
+<div class="main-container">
+    <div class="header">
+        <h2>✨ ChronoCare ER</h2>
+        <div class="search-area">
+            🔍 ძებნა: 
+            <input type="text" id="searchName" placeholder="ექთნის სახელი..." onkeyup="filterTable()">
+            <input type="number" id="searchDay" placeholder="რიცხვი (1-31)" oninput="filterTable()">
+        </div>
+    </div>
 
-<div class="controls">
-    <label>თვე: <input type="month" id="monthPicker" onchange="initTable()"></label>
-    <input type="text" id="searchName" placeholder="ძებნა სახელით..." onkeyup="filterTable()">
-    <input type="number" id="searchDay" placeholder="რიცხვით..." min="1" max="31" oninput="filterTable()">
-    <button class="btn-blue" onclick="autoFill4()">⚡ ყოველ მე-4 დღეს</button>
-    <button class="btn-green" onclick="saveData()">💾 შენახვა</button>
-    <button class="btn-red" onclick="downloadPDF()">📄 PDF ექსპორტი</button>
-</div>
+    <div class="controls">
+        <div class="btn-column">
+            <button class="btn-save" onclick="saveData()">💾 შენახვა</button>
+            <button class="btn-pdf" onclick="downloadPDF()">📄 PDF ექსპორტი</button>
+            <button class="btn-auto" onclick="autoFill4()">⚡ ყოველ მე-4 დღეს შევსება</button>
+        </div>
 
-<div style="overflow: auto; height: 80vh;">
-    <table id="schedTable">
-        <thead>
-            <tr id="headerRow">
-                <th class="name-col">ექთნები</th>
-                <th>გეგმა</th>
-                <th>ფაქტი</th>
-            </tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
+        <div class="record-panel">
+            <strong>📍 რეალური საათის დაფიქსირება:</strong><br><br>
+            <select id="recNurse"></select>
+            <input type="month" id="monthPicker" onchange="initTable()">
+            <input type="number" id="recDay" placeholder="რიცხვი" min="1" max="31">
+            <select id="recHours">
+                <option value="8">8 სთ</option>
+                <option value="16">16 სთ</option>
+                <option value="24">24 სთ</option>
+                <option value="0">0 (გაცვლა)</option>
+            </select>
+            <button class="btn-record" onclick="recordActual()">დაფიქსირება</button>
+        </div>
+    </div>
+
+    <div class="table-area">
+        <table id="schedTable">
+            <thead>
+                <tr id="headerRow">
+                    <th class="name-col">ექთნების სია (51)</th>
+                    <th>გეგმა (ჯამი)</th>
+                    <th>რეალური (ჯამი)</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
     let nurses = JSON.parse(localStorage.getItem('nurseList')) || Array.from({length: 51}, (_, i) => `ექთანი ${i+1}`);
     let scheduleData = JSON.parse(localStorage.getItem('scheduleData')) || {};
 
-    function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate(); }
-
+    // საწყისი ფუნქციები
     function initTable() {
         const picker = document.getElementById('monthPicker');
         if (!picker.value) {
@@ -71,61 +104,67 @@
         }
         
         const [year, month] = picker.value.split('-').map(Number);
-        const days = getDaysInMonth(year, month - 1);
-        const headerRow = document.getElementById('headerRow');
+        const days = new Date(year, month, 0).getDate();
         const body = document.getElementById('tableBody');
+        const header = document.getElementById('headerRow');
 
-        // თარიღების სვეტების გაწმენდა და შექმნა
-        while (headerRow.cells.length > 3) headerRow.deleteCell(1);
+        // თარიღების სვეტების რენდერი
+        while (header.cells.length > 3) header.deleteCell(1);
         for (let i = 1; i <= days; i++) {
             let th = document.createElement('th');
             th.innerText = i;
-            headerRow.insertBefore(th, headerRow.cells[headerRow.cells.length - 2]);
+            header.insertBefore(th, header.cells[header.cells.length - 2]);
+        }
+
+        // ექთნების სელექტის შევსება (ჩამოსაშლელი მენიუ)
+        const recNurse = document.getElementById('recNurse');
+        if(recNurse.options.length === 0) {
+            nurses.forEach((n, i) => recNurse.add(new Option(n, i)));
         }
 
         body.innerHTML = '';
+        const mKey = picker.value;
+        if (!scheduleData[mKey]) scheduleData[mKey] = {};
+
         nurses.forEach((name, nIdx) => {
-            const monthKey = picker.value;
-            if (!scheduleData[monthKey]) scheduleData[monthKey] = {};
-            if (!scheduleData[monthKey][nIdx]) scheduleData[monthKey][nIdx] = { plan: Array(days).fill(0), fact: Array(days).fill(0) };
-
-            // გეგმიური რიგი
-            let trPlan = document.createElement('tr');
-            trPlan.className = 'row-plan';
-            trPlan.innerHTML = `<td rowspan="2" class="name-col">${name}</td>`;
-            
-            // ფაქტიური რიგი
-            let trFact = document.createElement('tr');
-            trFact.className = 'row-fact';
-
-            let sumPlan = 0, sumFact = 0;
-
-            for (let d = 0; d < days; d++) {
-                let pVal = scheduleData[monthKey][nIdx].plan[d] || 0;
-                let fVal = scheduleData[monthKey][nIdx].fact[d] || 0;
-                sumPlan += pVal; sumFact += fVal;
-
-                trPlan.innerHTML += `<td><select onchange="updateVal('${monthKey}', ${nIdx}, ${d}, 'plan', this.value)">
-                    <option value="0" ${pVal==0?'selected':''}>-</option>
-                    <option value="8" ${pVal==8?'selected':''}>8</option>
-                    <option value="16" ${pVal==16?'selected':''}>16</option>
-                    <option value="24" ${pVal==24?'selected':''}>24</option>
-                </select></td>`;
-                
-                trFact.innerHTML += `<td><input type="number" value="${fVal}" onchange="updateVal('${monthKey}', ${nIdx}, ${d}, 'fact', this.value)"></td>`;
+            if (!scheduleData[mKey][nIdx]) {
+                scheduleData[mKey][nIdx] = { plan: Array(days).fill(0), fact: Array(days).fill(0) };
             }
 
-            trPlan.innerHTML += `<td class="total-plan" id="tp-${nIdx}">${sumPlan}</td><td rowspan="2" class="total-fact" id="tf-${nIdx}">${sumFact}</td>`;
+            let trPlan = document.createElement('tr'); trPlan.className = 'row-plan';
+            let trFact = document.createElement('tr'); trFact.className = 'row-fact';
+            trPlan.innerHTML = `<td rowspan="2" class="name-col" contenteditable="true" onblur="updateNurseName(${nIdx}, this.innerText)">${name}</td>`;
+
+            let sumP = 0, sumF = 0;
+            for (let d = 0; d < days; d++) {
+                let p = scheduleData[mKey][nIdx].plan[d] || 0;
+                let f = scheduleData[mKey][nIdx].fact[d] || 0;
+                sumP += p; sumF += f;
+
+                trPlan.innerHTML += `<td>${p > 0 ? p : '-'}</td>`;
+                trFact.innerHTML += `<td>${f > 0 ? f : ''}</td>`;
+            }
+
+            trPlan.innerHTML += `<td class="total-plan">${sumP}</td><td rowspan="2" class="total-fact">${sumF}</td>`;
             body.appendChild(trPlan);
             body.appendChild(trFact);
         });
     }
 
-    function updateVal(mKey, nIdx, dIdx, type, val) {
-        scheduleData[mKey][nIdx][type][dIdx] = Number(val);
-        initTable(); // გადათვლა
+    // რეალური საათის ჩაწერა პანელიდან
+    function recordActual() {
+        const mKey = document.getElementById('monthPicker').value;
+        const nIdx = document.getElementById('recNurse').value;
+        const day = document.getElementById('recDay').value;
+        const hrs = document.getElementById('recHours').value;
+
+        if(!day || day < 1 || day > 31) { alert("მიუთითეთ სწორი რიცხვი!"); return; }
+
+        scheduleData[mKey][nIdx].fact[day-1] = Number(hrs);
+        initTable();
     }
 
+    // ავტო შევსება ყოველ მე-4 დღეს
     function autoFill4() {
         const mKey = document.getElementById('monthPicker').value;
         nurses.forEach((_, i) => {
@@ -137,30 +176,32 @@
         initTable();
     }
 
-    function filterTable() {
-        let name = document.getElementById('searchName').value.toLowerCase();
-        let day = document.getElementById('searchDay').value;
-        let rows = document.querySelectorAll('#tableBody tr');
-        
-        for (let i = 0; i < rows.length; i += 2) {
-            let nurseName = rows[i].cells[0].innerText.toLowerCase();
-            let show = nurseName.includes(name);
-            rows[i].style.display = show ? '' : 'none';
-            rows[i+1].style.display = show ? '' : 'none';
-        }
+    function updateNurseName(idx, newName) {
+        nurses[idx] = newName;
+        localStorage.setItem('nurseList', JSON.stringify(nurses));
     }
 
     function saveData() {
         localStorage.setItem('scheduleData', JSON.stringify(scheduleData));
-        alert("შენახულია!");
+        alert("მონაცემები შენახულია!");
     }
 
-    async function downloadPDF() {
+    function downloadPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('l', 'mm', 'a4');
-        doc.text(`ER Schedule: ${document.getElementById('monthPicker').value}`, 10, 10);
-        doc.autoTable({ html: '#schedTable', theme: 'grid', styles: { fontSize: 7 } });
-        doc.save("Schedule.pdf");
+        doc.setFontSize(16);
+        doc.text(`ChronoCare ER: ${document.getElementById('monthPicker').value}`, 15, 15);
+        doc.autoTable({ html: '#schedTable', theme: 'grid', startY: 20, styles: { fontSize: 7, cellPadding: 1 } });
+        doc.save(`Schedule_${document.getElementById('monthPicker').value}.pdf`);
+    }
+
+    function filterTable() {
+        let nameIn = document.getElementById('searchName').value.toLowerCase();
+        let rows = document.querySelectorAll('#tableBody tr');
+        for (let i = 0; i < rows.length; i += 2) {
+            let n = rows[i].cells[0].innerText.toLowerCase();
+            rows[i].style.display = rows[i+1].style.display = n.includes(nameIn) ? '' : 'none';
+        }
     }
 
     window.onload = initTable;
