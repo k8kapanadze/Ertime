@@ -1,8 +1,8 @@
-
+<!DOCTYPE html>
 <html lang="ka">
 <head>
     <meta charset="UTF-8">
-    <title>ErtimeCMC - ექთნების სისტემა</title>
+    <title>ErtimeCMC - Live სისტემა</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
@@ -11,51 +11,38 @@
         body { font-family: 'Segoe UI', sans-serif; margin: 20px; background: var(--bg); }
         .container { max-width: 1200px; margin: auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         
-        .top-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .box { padding: 15px; background: #fafafa; border-radius: 8px; border: 1px solid #ddd; }
-        
-        .controls-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #eee; padding: 15px; border-radius: 8px; }
-        
-        table { width: 100%; border-collapse: collapse; background: white; }
-        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
-        th { background: var(--blue); color: white; }
-        
+        /* ცხრილის სტილი */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+        th { background: var(--blue); color: white; position: sticky; top: 0; }
         .weekend { background-color: #fff0f0 !important; }
-        .real-cell { background-color: #f9f9f9; cursor: pointer; transition: 0.2s; }
+        .real-cell { background-color: #f9f9f9; cursor: pointer; font-weight: bold; color: var(--blue); }
         .real-cell:hover { background-color: #e3f2fd; }
-        .has-note::after { content: '📝'; font-size: 10px; margin-left: 5px; }
+        .has-note { background-color: #fff3cd !important; }
 
+        /* მართვის პანელი */
+        .controls-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #eee; padding: 15px; border-radius: 8px; gap: 10px; flex-wrap: wrap; }
         .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; color: white; font-weight: bold; background: var(--blue); }
         .btn-red { background: var(--red); }
         input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+
+        /* ჟურნალის ფანჯარა (Modal) */
+        #modal { display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); background:white; padding:25px; box-shadow:0 0 20px rgba(0,0,0,0.5); z-index:1000; border-radius:12px; width:400px; }
+        #modal h3 { margin-top:0; color: var(--blue); }
+        .modal-overlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999; }
+        textarea { width:100%; height:80px; margin-top:10px; margin-bottom:10px; padding:10px; border:1px solid #ddd; border-radius:5px; resize:none; }
+        
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="top-grid">
-        <div class="box">
-            <h3>რეალური საათი</h3>
-            <input type="text" id="rName" placeholder="ექთნის სახელი" list="nList">
-            <datalist id="nList"></datalist>
-            <select id="rDay"></select>
-            <select id="rHrs"><option value="24">24</option><option value="16">16</option><option value="8">8</option><option value="0">0</option></select>
-            <button class="btn" onclick="saveReal()">შენახვა</button>
-        </div>
-        <div class="box">
-            <h3>ძებნა</h3>
-            <input type="text" id="sName" placeholder="სახელი">
-            <input type="number" id="sDay" placeholder="რიცხვი">
-            <button class="btn" onclick="search()">ძებნა</button>
-            <div id="sOut" style="margin-top:10px; font-weight:bold;"></div>
-        </div>
-    </div>
-
-    <div class="controls-bar">
+    <div class="controls-bar no-print">
         <div>
-            <button class="btn btn-red" onclick="bulkFillYear()">წლიური ავტო-შევსება (1/4)</button>
-            <input type="text" id="nurseInp" placeholder="ახალი ექთანი">
+            <input type="text" id="nurseInp" placeholder="ექთნის სახელი">
             <button class="btn" onclick="addNurse()">დამატება</button>
+            <button class="btn btn-red" onclick="bulkFillYear()">წლიური ავტო-შევსება (1/4)</button>
         </div>
         <div>
             <select id="mSel" onchange="load()"></select>
@@ -64,9 +51,19 @@
         </div>
     </div>
 
-    <div id="tableBox">
-        <p style="text-align:center;">იტვირთება მონაცემები...</p>
+    <div id="tableBox">ცარიელია...</div>
+</div>
+
+<div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
+<div id="modal">
+    <h3 id="modalTitle">დღის ჩანაწერი</h3>
+    <div id="expDiv">
+        <label><b>სამუშაო გამოცდილება:</b></label>
+        <textarea id="noteExp" placeholder="აღწერეთ შემთხვევა..."></textarea>
     </div>
+    <label><b>დღიური / პირადი:</b></label>
+    <textarea id="noteDaily" placeholder="ჩაწერეთ შენიშვნა..."></textarea>
+    <button class="btn" onclick="saveNote()" style="width:100%">შენახვა</button>
 </div>
 
 <script>
@@ -83,10 +80,9 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let nurses = [], scheduleData = {};
+    let nurses = [], scheduleData = {}, activeCell = null;
     const months = ["იანვარი", "თებერვალი", "მარტი", "აპრილი", "მაისი", "ივნისი", "ივლისი", "აგვისტო", "სექტემბერი", "ოქტომბერი", "ნოემბერი", "დეკემბერი"];
 
-    // მონაცემების წამოღება
     db.ref().on('value', snap => {
         const val = snap.val() || {};
         nurses = val.nurses || [];
@@ -99,6 +95,7 @@
         months.forEach((m, i) => mSel.innerHTML += `<option value="${i}">${m}</option>`);
         mSel.value = new Date().getMonth();
         document.getElementById('ySel').value = new Date().getFullYear();
+        load();
     };
 
     function load() {
@@ -106,13 +103,8 @@
         const y = parseInt(document.getElementById('ySel').value);
         const daysInMonth = new Date(y, m + 1, 0).getDate();
         
-        if (nurses.length === 0) {
-            document.getElementById('tableBox').innerHTML = "<p>ექთნების სია ცარიელია.</p>";
-            return;
-        }
-
         let h = `<table><thead><tr><th rowspan="2">რიცხვი</th>`;
-        nurses.forEach(n => h += `<th colspan="2">${n} <span style="cursor:pointer" onclick="delNurse('${n}')">❌</span></th>`);
+        nurses.forEach(n => h += `<th colspan="2">${n} <span class="no-print" style="cursor:pointer" onclick="delNurse('${n}')">❌</span></th>`);
         h += `</tr><tr>`;
         nurses.forEach(() => h += `<th>გეგმა</th><th>რეალური</th>`);
         h += `</tr></thead><tbody>`;
@@ -122,10 +114,9 @@
             h += `<tr class="${isWknd ? 'weekend' : ''}"><td><b>${d}</b></td>`;
             
             nurses.forEach(n => {
-                const pKey = `${y}-${m}-${n}-p`;
-                const rKey = `${y}-${m}-${n}-r`;
-                const pVal = (scheduleData[pKey] && scheduleData[pKey][d]) || 0;
-                const rVal = (scheduleData[rKey] && scheduleData[rKey][d]) || 0;
+                const pVal = (scheduleData[`${y}-${m}-${n}-p`] && scheduleData[`${y}-${m}-${n}-p`][d]) || 0;
+                const rVal = (scheduleData[`${y}-${m}-${n}-r`] && scheduleData[`${y}-${m}-${n}-r`][d]) || 0;
+                const hasNote = (scheduleData[`${y}-${m}-${n}-notes`] && scheduleData[`${y}-${m}-${n}-notes`][d]);
 
                 h += `<td>
                     <select onchange="upd('${n}',${d},this.value,'p')">
@@ -135,14 +126,13 @@
                         <option value="24" ${pVal==24?'selected':''}>24</option>
                     </select>
                 </td>
-                <td class="real-cell" onclick="alert('აქ გაიხსნება ჟურნალი!')">
+                <td class="real-cell ${hasNote ? 'has-note' : ''}" onclick="openJournal('${n}',${d},${pVal})">
                     ${rVal || '-'}
                 </td>`;
             });
             h += `</tr>`;
         }
         document.getElementById('tableBox').innerHTML = h + `</tbody></table>`;
-        updateDLists(daysInMonth);
     }
 
     function upd(n, d, v, t) {
@@ -150,10 +140,41 @@
         db.ref(`scheduleData/${y}-${m}-${n}-${t}/${d}`).set(parseInt(v));
     }
 
-    function saveReal() {
-        const n = document.getElementById('rName').value, d = document.getElementById('rDay').value, h = document.getElementById('rHrs').value;
+    function openJournal(nurse, day, plan) {
         const m = document.getElementById('mSel').value, y = document.getElementById('ySel').value;
-        if(n && d) db.ref(`scheduleData/${y}-${m}-${n}-r/${d}`).set(parseInt(h));
+        activeCell = { nurse, day, m, y };
+        
+        document.getElementById('modalTitle').innerText = `${nurse} - ${day} ${months[m]}`;
+        
+        // თუ მორიგეა (plan > 0), ვაჩვენებთ გამოცდილების ველს
+        document.getElementById('expDiv').style.display = (plan > 0) ? 'block' : 'none';
+        
+        // მონაცემების ამოღება
+        const existing = (scheduleData[`${y}-${m}-${nurse}-notes`] && scheduleData[`${y}-${m}-${nurse}-notes`][day]) || {exp:"", daily:""};
+        document.getElementById('noteExp').value = existing.exp || "";
+        document.getElementById('noteDaily').value = existing.daily || "";
+
+        document.getElementById('modal').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+    }
+
+    function saveNote() {
+        const { nurse, day, m, y } = activeCell;
+        const exp = document.getElementById('noteExp').value;
+        const daily = document.getElementById('noteDaily').value;
+        
+        db.ref(`scheduleData/${y}-${m}-${nurse}-notes/${day}`).set({ exp, daily });
+        
+        // თუ რეალურში არაფერი წერია, ავტომატურად ჩავწეროთ გეგმიური საათი
+        const pVal = (scheduleData[`${y}-${m}-${nurse}-p`] && scheduleData[`${y}-${m}-${nurse}-p`][day]) || 0;
+        db.ref(`scheduleData/${y}-${m}-${nurse}-r/${day}`).set(pVal);
+        
+        closeModal();
+    }
+
+    function closeModal() {
+        document.getElementById('modal').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
     }
 
     function addNurse() {
@@ -165,45 +186,22 @@
         }
     }
 
-    function delNurse(n) { if(confirm('წავშალოთ ' + n + '?')) { 
-        nurses = nurses.filter(x => x !== n); 
-        db.ref('nurses').set(nurses); 
-    } }
-
-    function updateDLists(d) {
-        let o = ""; for(let i=1; i<=d; i++) o += `<option value="${i}">${i}</option>`;
-        document.getElementById('rDay').innerHTML = o;
-        let nl = ""; nurses.forEach(x => nl += `<option value="${x}">`);
-        document.getElementById('nList').innerHTML = nl;
-    }
+    function delNurse(n) { if(confirm('წავშალოთ ' + n + '?')) { nurses = nurses.filter(x => x !== n); db.ref('nurses').set(nurses); } }
 
     async function bulkFillYear() {
         const n = prompt("ჩაწერეთ სახელი:");
         if(!nurses.includes(n)) return alert("ვერ მოიძებნა");
         const startDay = parseInt(prompt("საწყისი რიცხვი:", "1"));
-        const hrs = parseInt(prompt("საათები (24):", "24"));
+        const yr = document.getElementById('ySel').value;
         
-        let curr = new Date(document.getElementById('ySel').value, document.getElementById('mSel').value, startDay);
-        const targetYear = curr.getFullYear();
+        let curr = new Date(yr, document.getElementById('mSel').value, startDay);
         let updates = {};
-
-        while(curr.getFullYear() === targetYear) {
-            updates[`scheduleData/${curr.getFullYear()}-${curr.getMonth()}-${n}-p/${curr.getDate()}`] = hrs;
+        while(curr.getFullYear() == yr) {
+            updates[`scheduleData/${curr.getFullYear()}-${curr.getMonth()}-${n}-p/${curr.getDate()}`] = 24;
             curr.setDate(curr.getDate() + 4);
         }
         await db.ref().update(updates);
         alert("შეივსო წლის ბოლომდე!");
-    }
-
-    function search() {
-        const sn = document.getElementById('sName').value, sd = document.getElementById('sDay').value;
-        const m = document.getElementById('mSel').value, y = document.getElementById('ySel').value;
-        const out = document.getElementById('sOut');
-        if(sn) {
-            const k = `${y}-${m}-${sn}-p`;
-            const d = scheduleData[k] ? Object.keys(scheduleData[k]).filter(x => scheduleData[k][x]>0) : [];
-            out.innerHTML = d.length ? `${sn} მორიგეობს: ${d.join(', ')}` : "ვერ მოიძებნა";
-        }
     }
 </script>
 </body>
