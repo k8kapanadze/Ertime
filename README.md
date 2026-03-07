@@ -2,59 +2,58 @@
 <html lang="ka">
 <head>
     <meta charset="UTF-8">
-    <title>ექთნების Live სისტემა - ErtimeCMC</title>
-    
+    <title>ErtimeCMC - ექთნების Live სისტემა</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
     <style>
-        :root { --blue: #001f3f; --gray: #f8f9fa; --red: #8b0000; --white: #ffffff; --border: #dee2e6; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background: #f0f2f5; color: #333; }
-        .container { max-width: 900px; margin: auto; background: var(--white); padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        :root { --blue: #001f3f; --light-blue: #e7eff6; --red: #8b0000; --white: #ffffff; --border: #ccc; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 15px; background: #f4f7f6; }
+        .container { max-width: 1200px; margin: auto; background: var(--white); padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         
-        .header-box { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid var(--blue); padding-bottom: 15px; }
-        .controls { display: flex; gap: 10px; flex-wrap: wrap; background: #fdfdfd; padding: 15px; border-radius: 8px; border: 1px solid #eee; margin-bottom: 20px; }
+        .top-panel { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .box { padding: 15px; border: 1px solid var(--border); border-radius: 8px; background: #fafafa; }
         
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; }
-        th, td { border: 1px solid var(--border); padding: 10px; text-align: center; }
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px; background: #eee; border-radius: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; background: white; font-size: 14px; }
+        th, td { border: 1px solid var(--border); padding: 8px; text-align: center; }
         th { background: var(--blue); color: white; position: sticky; top: 0; }
         
-        .day-row:nth-child(even) { background-color: #fcfcfc; }
-        .weekend { background-color: #fff0f0 !important; }
-        .today { border: 2px solid var(--red) !important; font-weight: bold; }
+        .nurse-col-header { background: #003366; }
+        .real-col { background-color: var(--light-blue); }
+        .weekend { background-color: #ffeaea !important; }
         
-        .btn { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; transition: 0.3s; }
-        .btn-blue { background: var(--blue); color: white; }
-        .btn-red { background: var(--red); color: white; }
-        .btn:hover { opacity: 0.8; }
+        .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; color: white; background: var(--blue); }
+        .btn-red { background: var(--red); }
+        input, select { padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
 
-        input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; outline: none; }
-        .nurse-header { font-size: 1.1em; color: var(--blue); }
-        
-        @media print { .controls, .btn, .no-print { display: none !important; } }
+        @media print { .top-panel, .controls, .no-print { display: none !important; } }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header-box">
-        <h2 style="margin:0">📅 მორიგეობის განრიგი</h2>
-        <div class="no-print">
+    <div class="top-panel">
+        <div class="box">
+            <h3>🔍 ძებნა და მართვა</h3>
+            <input type="text" id="nurseInp" placeholder="ახალი ექთანი">
+            <button class="btn" onclick="addNurse()">დამატება</button>
+            <button class="btn btn-red" onclick="bulkFillYear()">📅 წლიური ავტო-შევსება (1/4)</button>
+        </div>
+        <div class="box">
+            <h3>📅 პერიოდი</h3>
             <select id="mSel" onchange="load()"></select>
-            <input type="number" id="ySel" value="2024" style="width: 80px;" onchange="load()">
+            <input type="number" id="ySel" value="2024" style="width: 70px;" onchange="load()">
         </div>
     </div>
 
-    <div class="controls no-print">
-        <div style="flex:1">
-            <input type="text" id="nurseInp" placeholder="ექთნის სახელი">
-            <button class="btn btn-blue" onclick="addNurse()">დამატება</button>
-        </div>
-        <button class="btn btn-red" onclick="bulkFillYear()">წლიური ავტო-შევსება (1/4)</button>
-        <button class="btn" style="background:#555; color:white" onclick="window.print()">ბეჭდვა</button>
+    <div class="controls">
+        <div id="summary">მონიშნეთ თვე და წელი</div>
+        <button class="btn" style="background:#444" onclick="window.print()">ბეჭდვა</button>
     </div>
 
-    <div id="tableBox">
+    <div id="tableBox" style="overflow-x: auto;">
         </div>
 </div>
 
@@ -92,37 +91,63 @@
     function load() {
         const m = parseInt(document.getElementById('mSel').value);
         const y = parseInt(document.getElementById('ySel').value);
-        const daysInMonth = new Date(y, m + 1, 0).getDate();
+        const days = new Date(y, m + 1, 0).getDate();
         
-        let h = `<table><thead><tr><th>თარიღი</th>`;
-        nurses.forEach(n => h += `<th class="nurse-header">${n} <span style="cursor:pointer; font-size:10px" onclick="delNurse('${n}')">❌</span></th>`);
+        let h = `<table><thead><tr>
+            <th rowspan="2">რიცხვი</th>`;
+        
+        // ექთნების სვეტები (გეგმიური და რეალური)
+        nurses.forEach(n => {
+            h += `<th colspan="2" class="nurse-col-header">${n} <span class="no-print" style="cursor:pointer" onclick="delNurse('${n}')"> (❌)</span></th>`;
+        });
+        h += `</tr><tr>`;
+        nurses.forEach(() => h += `<th>გეგმა</th><th class="real-col">რეალური</th>`);
         h += `</tr></thead><tbody>`;
 
-        for(let d = 1; d <= daysInMonth; d++) {
-            const dateObj = new Date(y, m, d);
-            const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
-            h += `<tr class="${isWeekend ? 'weekend' : ''}">
-                <td style="font-weight:bold">${d} ${months[m].substring(0,3)}</td>`;
+        for(let d = 1; d <= days; d++) {
+            const isWknd = [0, 6].includes(new Date(y, m, d).getDay());
+            h += `<tr class="${isWknd ? 'weekend' : ''}">
+                <td style="font-weight:bold">${d}</td>`;
             
             nurses.forEach(n => {
-                const val = (scheduleData[`${y}-${m}-${n}`] && scheduleData[`${y}-${m}-${n}`][d]) || 0;
+                const plan = (scheduleData[`${y}-${m}-${n}-p`] && scheduleData[`${y}-${m}-${n}-p`][d]) || 0;
+                const real = (scheduleData[`${y}-${m}-${n}-r`] && scheduleData[`${y}-${m}-${n}-r`][d]) || 0;
+                
                 h += `<td>
-                    <select onchange="upd('${n}',${d},this.value)">
-                        <option value="0" ${val==0?'selected':''}>-</option>
-                        <option value="8" ${val==8?'selected':''}>8</option>
-                        <option value="16" ${val==16?'selected':''}>16</option>
-                        <option value="24" ${val==24?'selected':''}>24</option>
+                    <select onchange="upd('${n}',${d},this.value,'p')">
+                        <option value="0" ${plan==0?'selected':''}>-</option>
+                        <option value="8" ${plan==8?'selected':''}>8</option>
+                        <option value="16" ${plan==16?'selected':''}>16</option>
+                        <option value="24" ${plan==24?'selected':''}>24</option>
+                    </select>
+                </td>
+                <td class="real-col">
+                    <select onchange="upd('${n}',${d},this.value,'r')">
+                        <option value="0" ${real==0?'selected':''}>-</option>
+                        <option value="8" ${real==8?'selected':''}>8</option>
+                        <option value="16" ${real==16?'selected':''}>16</option>
+                        <option value="24" ${real==24?'selected':''}>24</option>
                     </select>
                 </td>`;
             });
             h += `</tr>`;
         }
-        document.getElementById('tableBox').innerHTML = h + `</tbody></table>`;
+        
+        // ჯამების სტრიქონი
+        h += `<tr style="background:#eee; font-weight:bold"><td>ჯამი:</td>`;
+        nurses.forEach(n => {
+            let sumP = 0, sumR = 0;
+            if(scheduleData[`${y}-${m}-${n}-p`]) Object.values(scheduleData[`${y}-${m}-${n}-p`]).forEach(v => sumP += v);
+            if(scheduleData[`${y}-${m}-${n}-r`]) Object.values(scheduleData[`${y}-${m}-${n}-r`]).forEach(v => sumR += v);
+            h += `<td>${sumP}</td><td class="real-col">${sumR}</td>`;
+        });
+
+        document.getElementById('tableBox').innerHTML = h + `</tr></tbody></table>`;
     }
 
-    function upd(n, d, v) {
+    function upd(n, d, v, type) {
         const m = document.getElementById('mSel').value, y = document.getElementById('ySel').value;
-        db.ref(`scheduleData/${y}-${m}-${n}/${d}`).set(parseInt(v));
+        db.ref(`scheduleData/${y}-${m}-${n}-${type}/${d}`).set(parseInt(v));
     }
 
     function addNurse() {
@@ -134,40 +159,37 @@
         }
     }
 
-    function delNurse(n) { if(confirm('წავშალოთ ' + n + '?')) { nurses = nurses.filter(x => x !== n); db.ref('nurses').set(nurses); } }
+    function delNurse(n) { if(confirm('წავშალოთ ' + n + '?')) { 
+        nurses = nurses.filter(x => x !== n); 
+        db.ref('nurses').set(nurses); 
+    } }
 
     async function bulkFillYear() {
-        const n = prompt("რომელი ექთნისთვის შევავსოთ? (ჩაწერეთ სახელი ზუსტად)");
+        const n = prompt("ჩაწერეთ ექთნის სახელი:");
         if(!nurses.includes(n)) return alert("ექთანი ვერ მოიძებნა");
         
-        const startDay = prompt("რომელი რიცხვიდან დავიწყოთ (მიმდინარე თვეში)?", "1");
-        const hrs = prompt("რამდენ საათიანი მორიგეობა? (8, 16, ან 24)", "24");
+        const startDay = parseInt(prompt("რომელი რიცხვიდან დავიწყოთ (ამ თვეში)?", "1"));
+        const hrs = parseInt(prompt("საათები (8, 16, 24):", "24"));
         
         if(!startDay || !hrs) return;
 
         const startM = parseInt(document.getElementById('mSel').value);
         const startY = parseInt(document.getElementById('ySel').value);
         
-        // საწყისი თარიღის ობიექტი
-        let currentDate = new Date(startY, startM, parseInt(startDay));
-        const endYear = startY; // ავსებს მიმდინარე წლის ბოლომდე
-
-        if(!confirm(`ნამდვილად გსურთ ${n}-სთვის წლის ბოლომდე გრაფიკის შევსება?`)) return;
-
+        let curr = new Date(startY, startM, startDay);
         let updates = {};
-        while(currentDate.getFullYear() === endYear) {
-            let y = currentDate.getFullYear();
-            let m = currentDate.getMonth();
-            let d = currentDate.getDate();
-            
-            updates[`scheduleData/${y}-${m}-${n}/${d}`] = parseInt(hrs);
-            
-            // გადავდივართ 4 დღით წინ
-            currentDate.setDate(currentDate.getDate() + 4);
+
+        if(!confirm(`${n}-სთვის შეივსება გრაფიკი წლის ბოლომდე 1/4 პრინციპით. გავაგრძელოთ?`)) return;
+
+        // ციკლი წლის ბოლომდე
+        while(curr.getFullYear() === startY) {
+            let y = curr.getFullYear(), m = curr.getMonth(), d = curr.getDate();
+            updates[`scheduleData/${y}-${m}-${n}-p/${d}`] = hrs;
+            curr.setDate(curr.getDate() + 4);
         }
 
         await db.ref().update(updates);
-        alert("წლიური გრაფიკი განახლდა!");
+        alert("წლიური გრაფიკი წარმატებით შეივსო!");
     }
 </script>
 </body>
